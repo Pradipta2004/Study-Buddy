@@ -22,56 +22,173 @@ export default function LatexPreview({ content }: Props) {
     const parseQuestions = () => {
       const parsedQuestions: Question[] = [];
       
-      // Try different section patterns - most specific first
-      const patterns = [
-        /\\subsection\*\{Question\s+(\d+)\s*\[.*?\]\}([\s\S]*?)(?=\\subsection\*\{Question\s+\d+|\\end\{document\}|$)/g,
-        /\\section\*\{Question\s+(\d+)\}([\s\S]*?)(?=\\section\*\{Question\s+\d+\}|\\end\{document\}|$)/g,
-        /\\textbf\{Question\s+(\d+)\}([\s\S]*?)(?=\\textbf\{Question\s+\d+\}|\\end\{document\}|$)/g,
-        /Question\s+(\d+)[:\.\)]([\s\S]*?)(?=Question\s+\d+|\\end\{document\}|$)/gi,
-      ];
-
-      for (const questionRegex of patterns) {
-        let match;
-        questionRegex.lastIndex = 0; // Reset regex
+      console.log('Starting to parse LaTeX content...');
+      
+      // First, extract just the questions section to avoid parsing preamble
+      let questionsContent = content;
+      
+      // Remove everything before \begin{document}
+      const docStart = content.indexOf('\\begin{document}');
+      if (docStart !== -1) {
+        questionsContent = content.substring(docStart);
+      }
+      
+      // Look for the main questions section after instructions
+      const questionsSectionMatch = questionsContent.match(/(?:SECTION:\s*QUESTIONS|Questions Section)([\s\S]*?)(?=\\end\{document\}|$)/i);
+      if (questionsSectionMatch) {
+        questionsContent = questionsSectionMatch[1];
+      }
+      
+      console.log('Questions content length:', questionsContent.length);
+      
+      // Primary pattern: \noindent\textbf{Q.N} format (the one we instructed AI to use)
+      const primaryRegex = /\\noindent\\textbf\{Q\.(\d+)\}\s*\\hfill\s*\\textbf\{\[([^\]]+)\]\}([\s\S]*?)(?=\\noindent\\textbf\{Q\.\d+\}|\\end\{document\}|$)/g;
+      
+      let match;
+      while ((match = primaryRegex.exec(questionsContent)) !== null) {
+        const questionNumber = parseInt(match[1]);
+        const marks = match[2];
+        const fullContent = match[3];
         
-        while ((match = questionRegex.exec(content)) !== null) {
+        // Split by solution marker
+        const solutionMatch = fullContent.match(/([\s\S]*?)\\noindent\\textbf\{Solution:\}([\s\S]*?)(?=\\noindent\\rule|$)/);
+        
+        let questionText, solutionText;
+        if (solutionMatch) {
+          questionText = solutionMatch[1].trim();
+          solutionText = solutionMatch[2].trim();
+        } else {
+          questionText = fullContent.trim();
+          solutionText = '';
+        }
+        
+        console.log(`Found question ${questionNumber} with ${marks}`);
+        
+        if (!isNaN(questionNumber) && questionText.length > 10) {
+          parsedQuestions.push({
+            number: questionNumber,
+            question: questionText,
+            solution: solutionText
+          });
+        }
+      }
+      
+      console.log(`Parsed ${parsedQuestions.length} questions with primary pattern`);
+      
+      // Fallback pattern 1: subsection format
+      if (parsedQuestions.length === 0) {
+        const subsectionRegex = /\\subsection\*\{(?:Q\.|Question)\s*(\d+)\s*\[([^\]]+)\]\}([\s\S]*?)(?=\\subsection\*\{(?:Q\.|Question)|\\end\{document\}|$)/g;
+        
+        while ((match = subsectionRegex.exec(questionsContent)) !== null) {
           const questionNumber = parseInt(match[1]);
-          const fullContent = match[2];
+          const marks = match[2];
+          const fullContent = match[3];
           
           // Split by solution marker
-          const solutionPatterns = [
-            /([\s\S]*?)\\subsection\*\{Solution\}([\s\S]*?)(?=\\subsection\*\{Question|\\vspace|$)/,
-            /([\s\S]*?)\\textbf\{Solution[:\.\)]?\}([\s\S]*?)(?=\\subsection\*\{Question|\\textbf\{Question|$)/,
-            /([\s\S]*?)Solution[:\.\)]([\s\S]*?)(?=Question \d+|$)/i
-          ];
+          const solutionMatch = fullContent.match(/([\s\S]*?)\\subsection\*\{Solution\}([\s\S]*?)(?=\\vspace|$)/);
           
-          let found = false;
-          for (const solPattern of solutionPatterns) {
-            const solutionMatch = fullContent.match(solPattern);
+          if (!isNaN(questionNumber)) {
             if (solutionMatch) {
               parsedQuestions.push({
                 number: questionNumber,
                 question: solutionMatch[1].trim(),
                 solution: solutionMatch[2].trim()
               });
-              found = true;
-              break;
+            } else {
+              parsedQuestions.push({
+                number: questionNumber,
+                question: fullContent.trim(),
+                solution: ''
+              });
             }
-          }
-          
-          if (!found) {
-            parsedQuestions.push({
-              number: questionNumber,
-              question: fullContent.trim(),
-              solution: ''
-            });
           }
         }
         
-        if (parsedQuestions.length > 0) break;
+        console.log(`Parsed ${parsedQuestions.length} questions with subsection pattern`);
+      }
+      
+      // If still no questions found, try other legacy patterns
+      if (parsedQuestions.length === 0) {
+        console.log('Trying legacy patterns...');
+        const patterns = [
+          // Standard subsection format with marks
+          /\\subsection\*\{Question\s+(\d+)\s*\[.*?\]\}([\s\S]*?)(?=\\subsection\*\{Question\s+\d+|\\end\{document\}|$)/g,
+          // Numbered format variations (1., Q1., Question 1, etc)
+          /(?:^|\n)(?:Q\.?|Question)?\s*(\d+)[\.\)]\s*([\s\S]*?)(?=(?:^|\n)(?:Q\.?|Question)?\s*\d+[\.\)]|\\end\{document\}|$)/gm,
+          // Section format
+          /\\section\*\{(?:Question\s+)?(\d+)(?:\s*\[.*?\])?\}([\s\S]*?)(?=\\section\*\{|\\end\{document\}|$)/g,
+          // Bold text format
+          /\\textbf\{(?:Question\s+)?(\d+)(?:[:\.\)]|\s*\[.*?\])?\}([\s\S]*?)(?=\\textbf\{(?:Question\s+)?\d+|\\end\{document\}|$)/g,
+          // Bare question format
+          /Question\s+(\d+)[:\.\)]?([\s\S]*?)(?=Question\s+\d+|\\end\{document\}|$)/gi,
+          // Enumerate item format
+          /\\item(?:\s*\[.*?\])?\s*(\d+)\.\s*([\s\S]*?)(?=\\item|\\end\{enumerate\}|$)/g,
+        ];
+
+        for (const questionRegex of patterns) {
+          let match;
+          questionRegex.lastIndex = 0; // Reset regex
+          
+          while ((match = questionRegex.exec(questionsContent)) !== null) {
+            const questionNumber = parseInt(match[1]);
+            if (isNaN(questionNumber)) continue;
+            
+            const fullContent = match[2];
+            
+            // Filter out instruction-like content early
+            if (fullContent.toLowerCase().includes('answer any') ||
+                fullContent.toLowerCase().includes('instructions to candidates') ||
+                fullContent.trim().length < 10) {
+              continue;
+            }
+            
+            // Split by solution marker - more flexible patterns
+            const solutionPatterns = [
+              /([\s\S]*?)\\subsection\*\{Solution\}([\s\S]*?)(?=\\subsection\*\{|\\vspace|$)/,
+              /([\s\S]*?)\\textbf\{Solution[:\.\)]?\}([\s\S]*?)(?=\\subsection\*\{|\\textbf\{(?:Question|Solution)|$)/,
+              /([\s\S]*?)\\section\*\{Solution\}([\s\S]*?)(?=\\section\*\{|$)/,
+              /([\s\S]*?)\n\s*Solution[:\.\)]?\s*([\s\S]*?)(?=\n\s*(?:Question|Q\.?)\s*\d+|$)/i,
+              /([\s\S]*?)\\textit\{Solution[:\.\)]?\}([\s\S]*?)(?=\\textit\{|$)/,
+            ];
+            
+            let found = false;
+            for (const solPattern of solutionPatterns) {
+              const solutionMatch = fullContent.match(solPattern);
+              if (solutionMatch) {
+                parsedQuestions.push({
+                  number: questionNumber,
+                  question: solutionMatch[1].trim(),
+                  solution: solutionMatch[2].trim()
+                });
+                found = true;
+                break;
+              }
+            }
+            
+            if (!found) {
+              parsedQuestions.push({
+                number: questionNumber,
+                question: fullContent.trim(),
+                solution: ''
+              });
+            }
+          }
+          
+          if (parsedQuestions.length > 0) break;
+        }
       }
 
-      setQuestions(parsedQuestions);
+      // Remove duplicates and sort by question number
+      const uniqueQuestions = Array.from(
+        new Map(parsedQuestions.map(q => [q.number, q])).values()
+      ).sort((a, b) => a.number - b.number);
+
+      console.log(`Final parsed questions count: ${uniqueQuestions.length}`);
+      if (uniqueQuestions.length > 0) {
+        console.log('First question:', uniqueQuestions[0]);
+      }
+
+      setQuestions(uniqueQuestions);
     };
 
     if (content) {
@@ -80,22 +197,32 @@ export default function LatexPreview({ content }: Props) {
   }, [content]);
 
   useEffect(() => {
-    if (previewRef.current && typeof window !== 'undefined') {
+    if (previewRef.current && typeof window !== 'undefined' && questions.length > 0) {
       // Render LaTeX math using KaTeX
       const renderMath = async () => {
-        const katex = await import('katex');
-        const renderMathInElement = (await import('katex/dist/contrib/auto-render')).default;
-        
-        if (previewRef.current) {
-          renderMathInElement(previewRef.current, {
-            delimiters: [
-              { left: '$$', right: '$$', display: true },
-              { left: '$', right: '$', display: false },
-              { left: '\\[', right: '\\]', display: true },
-              { left: '\\(', right: '\\)', display: false },
-            ],
-            throwOnError: false,
-          });
+        try {
+          const katex = await import('katex');
+          const renderMathInElement = (await import('katex/dist/contrib/auto-render')).default;
+          
+          if (previewRef.current) {
+            // Small delay to ensure DOM is ready
+            setTimeout(() => {
+              if (previewRef.current) {
+                renderMathInElement(previewRef.current, {
+                  delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false },
+                    { left: '\\[', right: '\\]', display: true },
+                    { left: '\\(', right: '\\)', display: false },
+                  ],
+                  throwOnError: false,
+                  trust: true,
+                });
+              }
+            }, 100);
+          }
+        } catch (error) {
+          console.error('KaTeX rendering error:', error);
         }
       };
 
@@ -119,15 +246,48 @@ export default function LatexPreview({ content }: Props) {
   const formatContent = (latex: string) => {
     // Remove documentclass and preamble for preview
     let formatted = latex
-      .replace(/\\documentclass\{[^}]*\}/g, '')
-      .replace(/\\usepackage\{[^}]*\}/g, '')
+      .replace(/\\documentclass(?:\[[^\]]*\])?\{[^}]*\}/g, '')
+      .replace(/\\usepackage(?:\[[^\]]*\])?\{[^}]*\}/g, '')
       .replace(/\\geometry\{[^}]*\}/g, '')
+      .replace(/\\pagestyle\{[^}]*\}/g, '')
+      .replace(/\\setlength\{[^}]*\}\{[^}]*\}/g, '')
+      .replace(/\\addtolength\{[^}]*\}\{[^}]*\}/g, '')
+      .replace(/\\fancyhf\{\}/g, '')
+      .replace(/\\fancyhead\[[^\]]*\]\{[^}]*\}/g, '')
+      .replace(/\\fancyfoot\[[^\]]*\]\{[^}]*\}/g, '')
       .replace(/\\begin\{document\}/g, '')
       .replace(/\\end\{document\}/g, '')
-      .replace(/\\maketitle/g, '<div class="text-center mb-8"><h1 class="text-3xl font-bold">Generated Questions</h1></div>')
+      .replace(/\\maketitle/g, '')
       .replace(/\\title\{([^}]*)\}/g, '')
       .replace(/\\author\{([^}]*)\}/g, '')
-      .replace(/\\date\{([^}]*)\}/g, '');
+      .replace(/\\date\{([^}]*)\}/g, '')
+      .replace(/\\noindent/g, '')
+      .replace(/\\centering/g, '')
+      .replace(/\\phantom\{[^}]*\}/g, '')
+      .replace(/\\dimexpr[^}]*\\fboxsep[^}]*\\fboxrule/g, '100%')
+      .replace(/\\vspace\{[^}]*\}/g, '<div class="my-4"></div>')
+      .replace(/\\hspace\{[^}]*\}/g, '<span class="inline-block w-4"></span>')
+      .replace(/\\newpage/g, '<div class="border-t-2 border-gray-300 my-8"></div>');
+
+    // Convert center environment
+    formatted = formatted
+      .replace(/\\begin\{center\}([\s\S]*?)\\end\{center\}/g, '<div class="text-center">$1</div>');
+
+    // Convert fbox and parbox - special handling for instruction boxes
+    formatted = formatted
+      .replace(/\\fbox\{\\parbox\{[^}]*\}\{([\s\S]*?)\}\}/g, (match, content) => {
+        // For instruction boxes, use special formatting
+        const processed = content
+          .replace(/\\begin\{itemize\}\[leftmargin=\*,?\s*itemsep=[^\]]*\]/g, '<ul class="list-disc ml-5 space-y-0.5 my-2">')
+          .replace(/\\begin\{itemize\}\[itemsep=[^\]]*\]/g, '<ul class="list-disc ml-5 space-y-0.5 my-2">')
+          .replace(/\\begin\{itemize\}/g, '<ul class="list-disc ml-5 space-y-1 my-2">');
+        return `<div class="border-2 border-black p-4 my-6 bg-white">${processed}</div>`;
+      })
+      .replace(/\\fbox\{([\s\S]*?)\}/g, '<div class="border-2 border-gray-800 p-4 rounded-md inline-block">$1</div>');
+
+    // Convert rules and lines
+    formatted = formatted
+      .replace(/\\rule\{[^}]*\}\{[^}]*\}/g, '<hr class="border-t-2 border-gray-400 my-2" />');
 
     // Convert sections
     formatted = formatted
@@ -136,82 +296,141 @@ export default function LatexPreview({ content }: Props) {
       .replace(/\\section\{([^}]*)\}/g, '<h2 class="text-2xl font-bold mt-8 mb-4 text-purple-700">$1</h2>')
       .replace(/\\subsection\{([^}]*)\}/g, '<h3 class="text-xl font-semibold mt-6 mb-3 text-indigo-600">$1</h3>');
 
-    // Convert lists
+    // Convert font sizes
     formatted = formatted
-      .replace(/\\begin\{itemize\}/g, '<ul class="list-disc list-inside ml-4 my-4">')
+      .replace(/\{\\Large\s+(.*?)\}/g, '<span class="text-2xl">$1</span>')
+      .replace(/\{\\large\s+(.*?)\}/g, '<span class="text-xl">$1</span>')
+      .replace(/\{\\small\s+(.*?)\}/g, '<span class="text-sm">$1</span>')
+      .replace(/\{\\tiny\s+(.*?)\}/g, '<span class="text-xs">$1</span>');
+
+    // Convert lists with better support for itemize options (default case)
+    formatted = formatted
+      .replace(/\\begin\{itemize\}(?:\[[^\]]*\])?/g, '<ul class="list-disc ml-6 my-3 space-y-1">')
       .replace(/\\end\{itemize\}/g, '</ul>')
-      .replace(/\\begin\{enumerate\}/g, '<ol class="list-decimal list-inside ml-4 my-4">')
+      .replace(/\\begin\{enumerate\}(?:\[[^\]]*\])?/g, '<ol class="list-decimal ml-6 my-3 space-y-1">')
       .replace(/\\end\{enumerate\}/g, '</ol>')
-      .replace(/\\item/g, '<li class="my-2">');
+      .replace(/\\item(?:\s*\[[^\]]*\])?/g, '<li class="ml-0 pl-1">');
 
     // Convert text formatting
     formatted = formatted
       .replace(/\\textbf\{([^}]*)\}/g, '<strong>$1</strong>')
       .replace(/\\textit\{([^}]*)\}/g, '<em>$1</em>')
-      .replace(/\\emph\{([^}]*)\}/g, '<em>$1</em>');
+      .replace(/\\emph\{([^}]*)\}/g, '<em>$1</em>')
+      .replace(/\\underline\{([^}]*)\}/g, '<u>$1</u>');
 
-    // Add paragraph breaks
+    // Convert line breaks
+    formatted = formatted
+      .replace(/\\\\\[?[^\]]*\]?/g, '<br/>')
+      .replace(/\\newline/g, '<br/>');
+
+    // Handle special characters (but preserve $ for math mode)
+    formatted = formatted
+      .replace(/\\&/g, '&')
+      .replace(/\\%/g, '%')
+      .replace(/\\#/g, '#')
+      // Only unescape underscores outside math mode (simplified approach)
+      .replace(/\\_(?![^$]*\$)/g, '_');
+    
+    // Handle additional LaTeX commands
+    formatted = formatted
+      .replace(/\\bigskip/g, '<div class="my-6"></div>')
+      .replace(/\\medskip/g, '<div class="my-4"></div>')
+      .replace(/\\smallskip/g, '<div class="my-2"></div>')
+      .replace(/\\quad/g, '<span class="inline-block w-8"></span>')
+      .replace(/\\qquad/g, '<span class="inline-block w-16"></span>')
+      .replace(/\\par\s*/g, '</p><p class="my-4">');
+
+    // Add paragraph breaks for double newlines
     formatted = formatted
       .split('\n\n')
       .map(para => para.trim())
-      .filter(para => para.length > 0)
-      .map(para => `<p class="my-4">${para}</p>`)
+      .filter(para => para.length > 0 && !para.match(/^<[^>]+>$/))
+      .map(para => {
+        // Don't wrap if already wrapped in HTML tags
+        if (para.match(/^<(div|h[1-6]|ul|ol|hr)/)) {
+          return para;
+        }
+        return `<p class="my-4">${para}</p>`;
+      })
       .join('\n');
 
     return formatted;
   };
 
   return (
-    <div className="bg-gradient-to-br from-gray-50 to-purple-50 border-2 border-purple-200 rounded-xl p-8 max-h-[600px] overflow-y-auto">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-purple-700">Generated Questions</h1>
-      </div>
-      
-      <div ref={previewRef} className="space-y-8">
-        {questions.length > 0 ? (
-          questions.map((q) => (
-            <div key={q.number} className="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
-              <div className="flex justify-between items-start mb-4">
-                <h2 className="text-2xl font-bold text-purple-700">Question {q.number}</h2>
-                {q.solution && (
-                  <button
-                    onClick={() => toggleSolution(q.number)}
-                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                      visibleSolutions.has(q.number)
-                        ? 'bg-purple-600 text-white hover:bg-purple-700'
-                        : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                    }`}
-                  >
-                    {visibleSolutions.has(q.number) ? '🔼 Hide Solution' : '👁️ See Solution'}
-                  </button>
-                )}
-              </div>
-              
-              <div className="prose prose-lg max-w-none mb-4">
-                <div dangerouslySetInnerHTML={{ __html: formatContent(q.question) }} />
-              </div>
-              
-              {q.solution && visibleSolutions.has(q.number) && (
-                <div className="mt-6 pt-6 border-t-2 border-purple-200">
-                  <h3 className="text-xl font-semibold text-indigo-600 mb-3">Solution</h3>
-                  <div className="prose prose-lg max-w-none bg-purple-50 p-4 rounded-lg">
-                    <div dangerouslySetInnerHTML={{ __html: formatContent(q.solution) }} />
-                  </div>
+    <div className="bg-gradient-to-br from-gray-50 to-purple-50 border-2 border-purple-200 rounded-xl p-4 sm:p-8 max-h-[700px] overflow-y-auto">
+      {questions.length > 0 ? (
+        <div className="space-y-6">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl sm:text-3xl font-bold text-purple-700">📚 Generated Questions</h1>
+            <p className="text-sm text-gray-600 mt-2">{questions.length} question{questions.length > 1 ? 's' : ''} found</p>
+          </div>
+          
+          <div ref={previewRef} className="space-y-4">
+            {questions.map((q) => (
+              <div key={q.number} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-purple-200">
+                {/* Card Header */}
+                <div className="bg-gradient-to-r from-purple-500 to-indigo-600 p-4 flex justify-between items-center">
+                  <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                    <span className="bg-white text-purple-600 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">
+                      {q.number}
+                    </span>
+                    Question {q.number}
+                  </h2>
+                  {q.solution && (
+                    <button
+                      onClick={() => toggleSolution(q.number)}
+                      className={`px-4 py-2 rounded-lg font-semibold transition-all transform hover:scale-105 ${
+                        visibleSolutions.has(q.number)
+                          ? 'bg-white text-purple-600 hover:bg-purple-50'
+                          : 'bg-purple-700 text-white hover:bg-purple-800'
+                      }`}
+                    >
+                      {visibleSolutions.has(q.number) ? '🔼 Hide Solution' : '👁️ See Solution'}
+                    </button>
+                  )}
                 </div>
-              )}
-            </div>
-          ))
-        ) : (
-          <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-6 text-center">
-            <div className="text-4xl mb-4">📝</div>
-            <h3 className="text-xl font-semibold text-blue-700 mb-2">Questions Generated Successfully!</h3>
-            <p className="text-blue-600">Use the download buttons above to get your PDF. The preview will show parsed questions if available.</p>
-            <div className="mt-4 text-left bg-white p-4 rounded max-h-96 overflow-y-auto">
-              <pre className="text-xs whitespace-pre-wrap">{content.substring(0, 1000)}...</pre>
+                
+                {/* Question Content */}
+                <div className="p-6">
+                  <div className="prose prose-lg max-w-none text-gray-800">
+                    <div dangerouslySetInnerHTML={{ __html: formatContent(q.question) }} />
+                  </div>
+                  
+                  {/* Solution Section */}
+                  {q.solution && visibleSolutions.has(q.number) && (
+                    <div className="mt-6 pt-6 border-t-2 border-purple-200 animate-fadeIn">
+                      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-5 border-l-4 border-green-500">
+                        <h3 className="text-xl font-bold text-green-700 mb-4 flex items-center gap-2">
+                          <span>✅</span> Solution
+                        </h3>
+                        <div className="prose prose-lg max-w-none text-gray-800">
+                          <div dangerouslySetInnerHTML={{ __html: formatContent(q.solution) }} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div ref={previewRef} className="bg-white rounded-xl shadow-lg p-8">
+          <div className="text-6xl mb-4 text-center">⚠️</div>
+          <h3 className="text-2xl font-bold text-gray-700 mb-4 text-center">No Questions Detected</h3>
+          <p className="text-gray-600 text-center mb-6">
+            The LaTeX content was generated, but questions couldn't be parsed automatically. 
+            Please download the PDF to view the formatted questions.
+          </p>
+          <div className="text-center">
+            <p className="text-sm text-gray-500 mb-2">Showing raw LaTeX content:</p>
+            <div className="bg-gray-50 border border-gray-300 rounded-lg p-4 max-h-96 overflow-y-auto text-left">
+              <pre className="text-xs whitespace-pre-wrap font-mono text-gray-700">{content.substring(0, 2000)}...</pre>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

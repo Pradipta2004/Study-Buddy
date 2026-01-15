@@ -5,6 +5,7 @@ An intelligent question generation system that converts PDF textbooks into custo
 ## ✨ Features
 
 - 📚 **PDF Upload**: Upload any PDF textbook or educational material
+- 📋 **Pattern Matching**: Upload a sample question paper to replicate its exact format, structure, and style
 - 🎯 **Subject Selection**: Choose from 8 different subjects including Mathematics, Physics, Chemistry, Biology, Computer Science, Statistics, Engineering, and Economics
 - 🔢 **Customizable Quantity**: Generate 1-50 questions per session
 - 📝 **Multiple Question Types**: 
@@ -12,13 +13,16 @@ An intelligent question generation system that converts PDF textbooks into custo
   - Conceptual Understanding
   - Real-world Application
   - Proof & Derivation
-  - Multiple Choice
+  - Multiple Choice (MCQ)
+  - Fill in the Blanks
   - True/False
 - 🎚️ **Difficulty Levels**: Easy, Medium, Hard, or Mixed
 - 📄 **Dual Download Options**: 
   - LaTeX source file (.tex)
-  - Compiled PDF document
+  - Compiled PDF document (Questions only or Questions + Solutions)
 - 🎨 **Modern UI**: Beautiful, responsive interface with real-time LaTeX rendering
+- 📐 **Professional Formatting**: Exam-standard layout with proper alignment, spacing, and typography
+- 🎓 **Question Paper Quality**: Generated PDFs match real examination paper standards
 - 🤖 **AI-Powered**: Uses Google Gemini 2.0 Flash for intelligent question generation
 
 ## 🚀 Getting Started
@@ -96,22 +100,58 @@ yarn start
 
 1. **Customize Your Questions**:
    - Select your subject from the dropdown
-   - Adjust the number of questions (1-50)
-   - Choose question types (multiple selections allowed)
+   - Choose student class level
+   - Adjust question types (multiple selections allowed)
    - Set difficulty level
+   - Optionally specify question distribution by type and marks
 
-2. **Upload PDF**:
+2. **Upload Pattern Paper (Recommended)**:
+   - Upload a sample question paper PDF to replicate its exact format
+   - The AI will match the header, instructions, sections, and question formatting
+   - This ensures your generated paper looks identical to your school/board format
+
+3. **Upload Textbook/Study Material**:
    - Click the upload area or drag & drop a PDF file
    - Maximum file size: 16MB
+   - This provides the content for questions
 
-3. **Generate Questions**:
-   - Click "Generate Questions" button
+4. **Generate Questions**:
+   - Click "Generate Questions Now" button
    - Wait for AI to process (usually 30-60 seconds)
+   - The AI creates questions based on your textbook using the pattern format
 
-4. **Download Results**:
+5. **Download Results**:
    - View questions with rendered LaTeX math
-   - Download as LaTeX (.tex) file
-   - Compile and download as PDF
+   - Download as LaTeX (.tex) file for editing
+   - Download PDF (Questions only) for students
+   - Download PDF (Questions + Solutions) for teachers
+
+## 🎨 Professional Formatting
+
+The generated question papers feature **professional exam-standard formatting**:
+
+### Visual Elements
+- ✅ **Bordered Header**: Professional title box with institution/exam name
+- ✅ **Exam Details Table**: Duration, marks, difficulty, and date in tabular format
+- ✅ **Instruction Box**: Clear, numbered instructions with proper padding
+- ✅ **Section Dividers**: Full-width rules separating sections
+- ✅ **Question Separators**: Half-width rules between questions
+- ✅ **Headers/Footers**: Subject name, page numbers, and professional footer
+
+### Layout Standards
+- 📏 **Standard Margins**: 2cm (left/right), 2.5cm (top/bottom)
+- 📐 **Proper Spacing**: 1.15 line spacing for readability
+- 📝 **Question Format**: `Q.1 [marks]` with right-aligned marks
+- 🔤 **Typography**: Hierarchical font sizes for sections and questions
+
+### Question Types Supported
+- **MCQ**: Options labeled (a), (b), (c), (d) with proper indentation
+- **Fill in Blanks**: Professional underlined spaces
+- **True/False**: Clear T/F presentation
+- **Short Answer**: 2-3 marks questions with concise format
+- **Long Answer**: 5-10 marks with sub-parts (a), (b), (c)
+
+See [FORMATTING_GUIDE.md](FORMATTING_GUIDE.md) for complete formatting documentation.
 
 ## 🛠️ Technology Stack
 

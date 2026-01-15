@@ -146,6 +146,7 @@ export default function Home() {
 
   const handleDownloadLatex = async () => {
     try {
+      setError(''); // Clear any previous errors
       const response = await fetch('/api/download-latex', {
         method: 'POST',
         headers: {
@@ -174,6 +175,7 @@ export default function Home() {
 
   const handleDownloadPDF = async (includeSolutions: boolean = true) => {
     try {
+      setError(''); // Clear any previous errors
       setLoading(true);
       const response = await fetch('/api/download-pdf', {
         method: 'POST',
@@ -237,11 +239,16 @@ export default function Home() {
           </h2>
 
           {/* Pattern File Upload - Optional */}
-          <div className="mb-6 sm:mb-8">
+          <div className="mb-6 sm:mb-8 bg-gradient-to-r from-purple-50 to-pink-50 p-4 sm:p-6 rounded-xl border-2 border-purple-200">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-700">
-                📋 Question Paper Pattern (Optional)
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-800">
+                  📋 Question Paper Pattern (Recommended)
+                </h3>
+                <span className="bg-purple-600 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                  EXACT MATCH
+                </span>
+              </div>
               {patternFile && (
                 <button
                   onClick={() => setPatternFile(null)}
@@ -251,19 +258,37 @@ export default function Home() {
                 </button>
               )}
             </div>
-            <p className="text-xs sm:text-sm text-gray-600 mb-3">
-              Upload a sample question paper so AI can understand and replicate its format, structure, and style.
+            <p className="text-xs sm:text-sm text-gray-700 mb-3 font-medium">
+              ✨ Upload a sample question paper and AI will replicate its <span className="text-purple-700 font-bold">EXACT</span> format, structure, instructions, marking scheme, section divisions, and presentation style!
             </p>
+            <div className="bg-purple-100 border border-purple-300 rounded-lg p-3 mb-3">
+              <p className="text-xs text-purple-900 font-semibold mb-2">🎯 What gets replicated:</p>
+              <ul className="text-xs text-purple-800 space-y-1 ml-4 list-disc">
+                <li>Header format, title, institution name</li>
+                <li>Instructions (word-for-word)</li>
+                <li>Section structure and divisions</li>
+                <li>Question numbering style</li>
+                <li>Mark allocation format</li>
+                <li>MCQ, Fill-in-blanks, True/False formats</li>
+                <li>Overall layout and spacing</li>
+              </ul>
+            </div>
             <div
-              className="border-2 border-dashed rounded-lg p-4 sm:p-6 text-center cursor-pointer transition-all border-purple-300 bg-purple-50 hover:bg-purple-100"
+              className="border-2 border-dashed rounded-lg p-4 sm:p-6 text-center cursor-pointer transition-all border-purple-400 bg-white hover:bg-purple-50 hover:border-purple-600"
               onClick={() => patternFileInputRef.current?.click()}
             >
               <div className="text-3xl sm:text-4xl mb-2">📋</div>
               <div className="text-sm sm:text-base text-gray-700">
                 {patternFile ? (
-                  <span className="font-semibold text-purple-600">{patternFile.name}</span>
+                  <div>
+                    <span className="font-semibold text-purple-600">{patternFile.name}</span>
+                    <p className="text-xs text-green-600 mt-1">✓ Pattern loaded - AI will match this format exactly!</p>
+                  </div>
                 ) : (
-                  'Click to upload pattern (Optional)'
+                  <div>
+                    <span className="font-semibold">Click to upload sample question paper</span>
+                    <p className="text-xs text-gray-500 mt-1">Get exact format replication!</p>
+                  </div>
                 )}
               </div>
               <input
@@ -310,6 +335,7 @@ export default function Home() {
 
           <div className="mt-4 sm:mt-6 text-center">
             <button
+              type="button"
               onClick={handleUpload}
               disabled={!file || loading}
               className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white px-8 sm:px-12 py-3 sm:py-4 rounded-full text-base sm:text-lg font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 w-full sm:w-auto"
@@ -348,12 +374,14 @@ export default function Home() {
               </h2>
               <div className="flex gap-2 sm:gap-3 flex-wrap w-full sm:w-auto">
                 <button
+                  type="button"
                   onClick={handleDownloadLatex}
                   className="bg-blue-600 text-white px-3 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-semibold shadow hover:bg-blue-700 transition-all hover:scale-105 flex-1 sm:flex-none"
                 >
                   📥 LaTeX
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleDownloadPDF(false)}
                   disabled={loading}
                   className="bg-green-600 text-white px-3 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-semibold shadow hover:bg-green-700 transition-all disabled:opacity-50 hover:scale-105 flex-1 sm:flex-none"
@@ -361,6 +389,7 @@ export default function Home() {
                   {loading ? 'Compiling...' : '📄 PDF (Q)'}
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleDownloadPDF(true)}
                   disabled={loading}
                   className="bg-purple-600 text-white px-3 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-semibold shadow hover:bg-purple-700 transition-all disabled:opacity-50 hover:scale-105 flex-1 sm:flex-none"
