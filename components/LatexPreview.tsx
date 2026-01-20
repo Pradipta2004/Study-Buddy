@@ -239,6 +239,17 @@ export default function LatexPreview({ content }: Props) {
       .replace(/\\phantom\{[^}]*\}/g, '')
       .replace(/\\dimexpr[^}]*\\fboxsep[^}]*\\fboxrule/g, '100%')
       .replace(/\\vspace\{[^}]*\}/g, '<div class="my-4"></div>')
+      // Handle fill-in-the-blank pattern BEFORE processing standalone hspace and underline
+      .replace(/\\underline\{\\hspace\{([^}]+)\}\}/g, (match, size) => {
+        console.log('Found fill-in-blank:', match, 'Size:', size);
+        // Convert LaTeX size to pixels (approximate: 1cm ≈ 37.8px)
+        const numMatch = size.match(/([\d.]+)/);
+        const num = numMatch ? parseFloat(numMatch[1]) : 2;
+        const pixels = Math.max(num * 37.8, 80); // Minimum 80px for visibility
+        const replacement = `<span class="inline-block border-b-2 border-gray-800" style="width: ${pixels}px; min-width: 80px; height: 1.5em; vertical-align: bottom;"></span>`;
+        console.log('Replacement:', replacement);
+        return replacement;
+      })
       .replace(/\\hspace\{[^}]*\}/g, '<span class="inline-block w-4"></span>')
       .replace(/\\newpage/g, '<div class="border-t-2 border-gray-300 my-8"></div>');
 
