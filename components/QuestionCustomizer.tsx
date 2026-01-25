@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSwipe } from '@/hooks/useSwipe';
 
 interface QuestionConfig {
   subject: string;
@@ -27,6 +28,7 @@ interface QuestionConfig {
 interface Props {
   config: QuestionConfig;
   onConfigChange: (config: QuestionConfig) => void;
+  mode: 'pattern' | 'custom';
 }
 
 const SUBJECTS = [
@@ -54,15 +56,6 @@ const SUBJECTS = [
   { value: 'general-science', label: '🔬 General Science' },
 ];
 
-const QUESTION_TYPES = [
-  { value: 'problem-solving', label: 'Problem Solving' },
-  { value: 'conceptual', label: 'Conceptual Understanding' },
-  { value: 'application', label: 'Real-world Application' },
-  { value: 'proof-based', label: 'Proof & Derivation' },
-  { value: 'multiple-choice', label: 'Multiple Choice' },
-  { value: 'true-false', label: 'True/False' },
-];
-
 const DIFFICULTIES = [
   { value: 'easy', label: '🟢 Easy' },
   { value: 'medium', label: '🟡 Medium' },
@@ -81,34 +74,115 @@ const CLASSES = [
   { value: 'college', label: 'College/University' },
 ];
 
-export default function QuestionCustomizer({ config, onConfigChange }: Props) {
-  const [isExpanded, setIsExpanded] = useState(true);
+type Step = 'class' | 'subject' | 'difficulty' | 'customize' | 'complete';
 
-  const handleSubjectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    onConfigChange({ ...config, subject: e.target.value });
+export default function QuestionCustomizer({ config, onConfigChange, mode }: Props) {
+  const [step, setStep] = useState<Step>('class');
+
+  const swipeHandlers = useSwipe({
+    onSwipeLeft: handleSwipeLeft,
+    onSwipeRight: handleSwipeRight,
+    threshold: 30,
+  });
+
+  function handleSwipeLeft() {
+    if (step === 'class') goToStep('subject');
+    else if (step === 'subject') goToStep('difficulty');
+    else if (step === 'difficulty') goToStep(mode === 'pattern' ? 'complete' : 'customize');
+    else if (step === 'customize') goToStep('complete');
+  }
+
+  function handleSwipeRight() {
+    if (step === 'subject') goToStep('class');
+    else if (step === 'difficulty') goToStep('subject');
+    else if (step === 'customize') goToStep('difficulty');
+    else if (step === 'complete') goToStep(mode === 'pattern' ? 'difficulty' : 'customize');
+  }
+
+  function goToStep(newStep: Step) {
+    setStep(newStep);
+  }
+
+  const getStepNumber = () => {
+    const steps = mode === 'pattern' 
+      ? ['class', 'subject', 'difficulty', 'complete'] 
+      : ['class', 'subject', 'difficulty', 'customize', 'complete'];
+    return steps.indexOf(step) + 1;
   };
 
-  const handleQuestionTypeToggle = (type: string) => {
-    const types = config.questionTypes.includes(type)
-      ? config.questionTypes.filter(t => t !== type)
-      : [...config.questionTypes, type];
-    
-    if (types.length > 0) {
-      onConfigChange({ ...config, questionTypes: types });
-    }
-  };
+  const getTotalSteps = () => mode === 'pattern' ? 4 : 5;
 
-  const handleDifficultyChange = (difficulty: string) => {
-    onConfigChange({ ...config, difficulty });
-  };
+  const renderClassSelector = () => (
+    <div className="animate-fadeIn">
+      <h3 className="text-lg font-bold text-gray-800 mb-4">Select Class</h3>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {CLASSES.map(cls => (
+          <button
+            key={cls.value}
+            onClick={() => {
+              onConfigChange({ ...config, studentClass: cls.value });
+              goToStep('subject');
+            }}
+            className={`py-3 px-2 rounded-lg font-semibold text-xs md:text-sm transition-all ${
+              config.studentClass === cls.value
+                ? 'bg-blue-600 text-white shadow-lg'
+                : 'bg-sky-100 text-blue-700 hover:bg-sky-200'
+            }`}
+          >
+            {cls.label.replace('Class ', '')}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
-  const handleClassChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    onConfigChange({ ...config, studentClass: e.target.value });
-  };
+  const renderSubjectSelector = () => (
+    <div className="animate-fadeIn">
+      <h3 className="text-lg font-bold text-gray-800 mb-4">Select Subject</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-72 overflow-y-auto">
+        {SUBJECTS.map(subject => (
+          <button
+            key={subject.value}
+            onClick={() => {
+              onConfigChange({ ...config, subject: subject.value });
+              goToStep('difficulty');
+            }}
+            className={`py-3 px-3 rounded-lg font-semibold text-sm transition-all text-left ${
+              config.subject === subject.value
+                ? 'bg-blue-600 text-white shadow-lg'
+                : 'bg-sky-100 text-blue-700 hover:bg-sky-200'
+            }`}
+          >
+            {subject.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
-  const handleCustomInstructionsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onConfigChange({ ...config, customInstructions: e.target.value });
-  };
+  const renderDifficultySelector = () => (
+    <div className="animate-fadeIn">
+      <h3 className="text-lg font-bold text-gray-800 mb-4">Select Difficulty</h3>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {DIFFICULTIES.map(diff => (
+          <button
+            key={diff.value}
+            onClick={() => {
+              onConfigChange({ ...config, difficulty: diff.value });
+              goToStep(mode === 'pattern' ? 'complete' : 'customize');
+            }}
+            className={`py-3 px-2 rounded-lg font-semibold text-xs md:text-sm transition-all ${
+              config.difficulty === diff.value
+                ? 'bg-blue-600 text-white shadow-lg'
+                : 'bg-sky-100 text-blue-700 hover:bg-sky-200'
+            }`}
+          >
+            {diff.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
   const handleQuestionTypeCountChange = (type: keyof NonNullable<QuestionConfig['questionsByType']>, delta: number) => {
     const current = config.questionsByType || { mcq: 0, fillInBlanks: 0, trueFalse: 0, general: 0 };
@@ -138,186 +212,164 @@ export default function QuestionCustomizer({ config, onConfigChange }: Props) {
     return marks['2'] + marks['3'] + marks['4'] + marks['5'] + marks['6'] + marks['10'];
   };
 
-  return (
-    <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl mb-6 sm:mb-8 overflow-hidden">
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-4 sm:px-6 md:px-8 py-4 sm:py-6 flex justify-between items-center bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-colors"
-      >
-        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">
-          ⚙️ Customize Questions
-        </h2>
-        <span className="text-2xl sm:text-3xl transform transition-transform duration-300" style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-          ▼
-        </span>
-      </button>
-
-      {isExpanded && (
-        <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
-          {/* Class and Subject Selection - Grid Layout */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            {/* Class Selection */}
-            <div>
-              <label className="block text-base sm:text-lg font-semibold text-gray-700 mb-2 sm:mb-3">
-                🏛️ Select Class
-              </label>
-              <select
-                value={config.studentClass}
-                onChange={handleClassChange}
-                className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-base sm:text-lg font-medium bg-white"
-              >
-                {CLASSES.map(cls => (
-                  <option key={cls.value} value={cls.value}>
-                    {cls.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Subject Selection */}
-            <div>
-              <label className="block text-base sm:text-lg font-semibold text-gray-700 mb-2 sm:mb-3">
-                📚 Subject
-              </label>
-              <select
-                value={config.subject}
-                onChange={handleSubjectChange}
-                className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-base sm:text-lg font-medium bg-white"
-              >
-                {SUBJECTS.map(subject => (
-                  <option key={subject.value} value={subject.value}>
-                    {subject.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Difficulty Level */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            <div>
-              <label className="block text-base sm:text-lg font-semibold text-gray-700 mb-2 sm:mb-3">
-                🎯 Difficulty Level
-              </label>
-              <select
-                value={config.difficulty}
-                onChange={(e) => handleDifficultyChange(e.target.value)}
-                className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-base sm:text-lg font-medium bg-white"
-              >
-                {DIFFICULTIES.map(diff => (
-                  <option key={diff.value} value={diff.value}>
-                    {diff.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Custom Instructions */}
-          <div>
-            <label className="block text-base sm:text-lg font-semibold text-gray-700 mb-2 sm:mb-3">
-              💡 Custom Instructions (Optional) ⭐
-            </label>
-            <textarea
-              value={config.customInstructions || ''}
-              onChange={handleCustomInstructionsChange}
-              placeholder="Examples: • Focus on Chapter 3: Photosynthesis only • Include more questions on chemical equations • Make difficulty level: moderate to hard • Focus on topics: cell structure, DNA replication • Include real-world application questions"
-              className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-xs sm:text-sm min-h-[80px] sm:min-h-[100px] resize-y"
-              rows={4}
-            />
-            <p className="mt-2 text-xs sm:text-sm text-yellow-700 flex items-start gap-2">
-              <span>💡</span>
-              <span><strong>Smart Tips:</strong> Be specific about chapters, topics, difficulty level, or question style. These instructions take highest priority during generation.</span>
-            </p>
-          </div>
-
-          {/* 1 Mark Questions */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 sm:p-6 rounded-xl border-2 border-blue-200">
-            <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">
-              1 Mark Questions <span className="text-blue-600">(Total: {getTotalQuestionsByType()})</span>
-            </h3>
-            <div className="space-y-2 sm:space-y-3">
-              {[
-                { key: 'mcq' as const, label: 'Multiple Choice (MCQ)' },
-                { key: 'fillInBlanks' as const, label: 'Fill in the Blanks' },
-                { key: 'trueFalse' as const, label: 'True or False' },
-                { key: 'general' as const, label: 'General Questions' }
-              ].map(item => (
-                <div key={item.key} className="flex items-center justify-between bg-white p-3 sm:p-4 rounded-lg shadow-sm">
-                  <span className="font-medium text-gray-700 text-sm sm:text-base">{item.label}</span>
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <button
-                      onClick={() => handleQuestionTypeCountChange(item.key, -1)}
-                      className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 hover:bg-gray-300 rounded-lg font-bold text-gray-700 transition-colors text-sm sm:text-base"
-                    >
-                      -
-                    </button>
-                    <span className="w-10 sm:w-12 text-center font-bold text-base sm:text-lg text-gray-800">
-                      {config.questionsByType?.[item.key] || 0}
-                    </span>
-                    <button
-                      onClick={() => handleQuestionTypeCountChange(item.key, 1)}
-                      className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-white transition-colors text-sm sm:text-base"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Questions by Marks */}
-          <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-4 sm:p-6 rounded-xl border-2 border-purple-200">
-            <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">
-              Questions by Marks <span className="text-purple-600">(Total: {getTotalQuestionsByMarks()})</span>
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-              {[
-                { key: '2' as const, label: '2 Marks' },
-                { key: '3' as const, label: '3 Marks' },
-                { key: '4' as const, label: '4 Marks' },
-                { key: '5' as const, label: '5 Marks' },
-                { key: '6' as const, label: '6 Marks' },
-                { key: '10' as const, label: '10 Marks' }
-              ].map(item => (
-                <div key={item.key} className="flex items-center justify-between bg-white p-3 sm:p-4 rounded-lg shadow-sm">
-                  <span className="font-medium text-gray-700 text-sm sm:text-base">{item.label}</span>
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <button
-                      onClick={() => handleQuestionMarkCountChange(item.key, -1)}
-                      className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 hover:bg-gray-300 rounded-lg font-bold text-gray-700 transition-colors text-sm sm:text-base"
-                    >
-                      -
-                    </button>
-                    <span className="w-10 sm:w-12 text-center font-bold text-base sm:text-lg text-gray-800">
-                      {config.questionsByMarks?.[item.key] || 0}
-                    </span>
-                    <button
-                      onClick={() => handleQuestionMarkCountChange(item.key, 1)}
-                      className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-600 hover:bg-purple-700 rounded-lg font-bold text-white transition-colors text-sm sm:text-base"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Configuration Summary */}
-          <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
-            <h3 className="font-semibold text-gray-700 mb-2 text-sm sm:text-base">📋 Configuration Summary:</h3>
-            <ul className="text-xs sm:text-sm text-gray-600 space-y-1">
-              <li>• Class: <span className="font-medium">{CLASSES.find(c => c.value === config.studentClass)?.label}</span></li>
-              <li>• Subject: <span className="font-medium">{SUBJECTS.find(s => s.value === config.subject)?.label}</span></li>
-              <li>• Total 1 Mark Questions: <span className="font-medium">{getTotalQuestionsByType()}</span></li>
-              <li>• Total Questions by Marks: <span className="font-medium">{getTotalQuestionsByMarks()}</span></li>
-              <li>• Difficulty: <span className="font-medium">{DIFFICULTIES.find(d => d.value === config.difficulty)?.label}</span></li>
-            </ul>
-          </div>
+  const renderCustomizeOptions = () => (
+    <div className="animate-fadeIn space-y-4">
+      <h3 className="text-lg font-bold text-gray-800 mb-4">Configure Questions</h3>
+      
+      {/* Question Types */}
+      <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 space-y-3">
+        <div className="flex justify-between items-center">
+          <p className="font-bold text-gray-800 text-sm">Question Types</p>
+          <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">Tot: {getTotalQuestionsByType()}</span>
         </div>
-      )}
+        <div className="space-y-2">
+          {[
+            { key: 'mcq' as const, label: 'MCQ' },
+            { key: 'trueFalse' as const, label: 'T/F' },
+            { key: 'fillInBlanks' as const, label: 'Fill' },
+            { key: 'general' as const, label: 'Gen' }
+          ].map(item => (
+            <div key={item.key} className="flex items-center justify-between bg-white p-2 rounded border border-blue-100">
+              <span className="font-medium text-gray-700 text-xs">{item.label}</span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handleQuestionTypeCountChange(item.key, -1)}
+                  className="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
+                >
+                  −
+                </button>
+                <span className="w-5 text-center text-xs font-bold text-gray-800">
+                  {config.questionsByType?.[item.key] || 0}
+                </span>
+                <button
+                  onClick={() => handleQuestionTypeCountChange(item.key, 1)}
+                  className="w-6 h-6 bg-blue-600 hover:bg-blue-700 rounded text-xs font-bold text-white"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Marks Configuration */}
+      <div className="bg-green-50 p-3 rounded-lg border border-green-200 space-y-3">
+        <div className="flex justify-between items-center">
+          <p className="font-bold text-gray-800 text-sm">By Marks</p>
+          <span className="text-xs bg-green-600 text-white px-2 py-1 rounded">Tot: {getTotalQuestionsByMarks()}</span>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { key: '2' as const, label: '2' },
+            { key: '3' as const, label: '3' },
+            { key: '4' as const, label: '4' },
+            { key: '5' as const, label: '5' },
+            { key: '6' as const, label: '6' },
+            { key: '10' as const, label: '10' }
+          ].map(item => (
+            <div key={item.key} className="flex items-center justify-between bg-white p-2 rounded border border-green-100">
+              <span className="font-medium text-gray-700 text-xs">{item.label}m</span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handleQuestionMarkCountChange(item.key, -1)}
+                  className="w-5 h-5 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
+                >
+                  −
+                </button>
+                <span className="w-4 text-center text-xs font-bold text-gray-800">
+                  {config.questionsByMarks?.[item.key] || 0}
+                </span>
+                <button
+                  onClick={() => handleQuestionMarkCountChange(item.key, 1)}
+                  className="w-5 h-5 bg-green-600 hover:bg-green-700 rounded text-xs font-bold text-white"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderComplete = () => (
+    <div className="animate-fadeIn">
+      <div className="bg-green-50 rounded-lg p-4 border-2 border-green-200 text-center space-y-2">
+        <p className="text-sm font-bold text-green-700">✓ Ready</p>
+        <div className="text-xs space-y-1 text-gray-700">
+          <p><span className="font-bold">Class:</span> {CLASSES.find(c => c.value === config.studentClass)?.label.replace('Class ', '')}</p>
+          <p><span className="font-bold">Subject:</span> {SUBJECTS.find(s => s.value === config.subject)?.label.split(' ')[0]}</p>
+          <p><span className="font-bold">Difficulty:</span> {DIFFICULTIES.find(d => d.value === config.difficulty)?.label.split(' ')[0]}</p>
+          {mode === 'custom' && (
+            <>
+              <p><span className="font-bold">Types:</span> {getTotalQuestionsByType()}</p>
+              <p><span className="font-bold">Marks:</span> {getTotalQuestionsByMarks()}</p>
+            </>
+          )}
+        </div>
+        <button
+          onClick={() => setStep('class')}
+          className="mt-2 bg-blue-600 text-white font-bold py-1 px-4 rounded text-xs hover:bg-blue-700"
+        >
+          Change
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div {...swipeHandlers} className="card p-5 md:p-6 space-y-4 animate-fadeIn">
+      {/* Header with Progress */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold text-gray-800">⚙️ Setup</h2>
+        <div className="flex gap-1">
+          {Array.from({ length: getTotalSteps() }).map((_, i) => (
+            <div
+              key={i}
+              className={`w-2 h-2 rounded-full transition-all ${
+                i < getStepNumber() ? 'bg-blue-600' : 'bg-gray-300'
+              }`}
+            ></div>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="min-h-64">
+        {step === 'class' && renderClassSelector()}
+        {step === 'subject' && renderSubjectSelector()}
+        {step === 'difficulty' && renderDifficultySelector()}
+        {step === 'customize' && renderCustomizeOptions()}
+        {step === 'complete' && renderComplete()}
+      </div>
+
+      {/* Navigation */}
+      <div className="flex gap-2 justify-between pt-2">
+        <button
+          onClick={() => {
+            if (step === 'subject') goToStep('class');
+            else if (step === 'difficulty') goToStep('subject');
+            else if (step === 'customize') goToStep('difficulty');
+            else if (step === 'complete') goToStep(mode === 'pattern' ? 'difficulty' : 'customize');
+          }}
+          className={`btn-secondary py-2 px-3 text-xs md:text-sm ${step === 'class' ? 'opacity-0 pointer-events-none' : ''}`}
+        >
+          ← Back
+        </button>
+        <button
+          onClick={() => {
+            if (step === 'class') goToStep('subject');
+            else if (step === 'subject') goToStep('difficulty');
+            else if (step === 'difficulty') goToStep(mode === 'pattern' ? 'complete' : 'customize');
+            else if (step === 'customize') goToStep('complete');
+          }}
+          className={`btn-primary py-2 px-3 text-xs md:text-sm ${step === 'complete' ? 'opacity-0 pointer-events-none' : ''}`}
+        >
+          Next →
+        </button>
+      </div>
     </div>
   );
 }

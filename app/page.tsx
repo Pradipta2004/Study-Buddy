@@ -27,6 +27,8 @@ interface QuestionConfig {
 }
 
 export default function Home() {
+  const [started, setStarted] = useState(false);
+  const [mode, setMode] = useState<'pattern' | 'custom' | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [patternFile, setPatternFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -241,233 +243,254 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800 py-4 sm:py-8 px-3 sm:px-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <header className="text-center text-white mb-8 sm:mb-12">
-          <div className="mb-4">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-2 drop-shadow-2xl bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 via-pink-300 to-purple-300">
-              📚 STUDYBUDDY
-            </h1>
-            <div className="inline-block bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-              <p className="text-xs sm:text-sm font-semibold text-yellow-200">
-                ⚡ Powered by INFOTECH SERVICES
-              </p>
-            </div>
-          </div>
-          <p className="text-lg sm:text-xl md:text-2xl opacity-90 font-medium">
-            Generate customized questions from your textbooks using AI
-          </p>
-          <p className="text-sm sm:text-base opacity-80 mt-2">
-            Smart. Fast. Personalized for Every Student.
-          </p>
-        </header>
+    <div className="min-h-screen bg-gradient-to-br from-white via-sky-50 to-blue-50">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-gradient-to-r from-blue-600 via-sky-500 to-blue-500 text-white shadow-lg">
+        <div className="max-w-6xl mx-auto px-4 py-4 md:py-6">
+          <h1 className="text-2xl md:text-4xl font-bold mb-1 flex items-center gap-3">
+            <span>📚</span> STUDYBUDDY
+          </h1>
+          <p className="text-xs md:text-sm opacity-90">AI-Powered Question Generator</p>
+        </div>
+      </header>
 
-        {/* Question Customizer */}
-        <QuestionCustomizer config={config} onConfigChange={setConfig} />
-
-        {/* Upload Section */}
-        <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 md:p-8 mb-6 sm:mb-8">
-          <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-gray-800">
-            📤 Upload Your Files
-          </h2>
-
-          {/* Pattern File Upload - Optional */}
-          <div className="mb-6 sm:mb-8 bg-gradient-to-r from-purple-50 to-pink-50 p-4 sm:p-6 rounded-xl border-2 border-purple-200">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-800">
-                  📋 Question Paper Pattern (Recommended)
-                </h3>
-                <span className="bg-purple-600 text-white text-xs px-2 py-1 rounded-full font-semibold">
-                  EXACT MATCH
-                </span>
-              </div>
-              {patternFile && (
-                <button
-                  onClick={() => setPatternFile(null)}
-                  className="text-red-600 hover:text-red-700 text-sm font-medium"
-                >
-                  ✕ Remove
-                </button>
-              )}
+      <main className="max-w-6xl mx-auto px-4 py-6 md:py-8 space-y-6 md:space-y-8">
+        {/* Get Started Screen */}
+        {!started ? (
+          <div className="card p-8 md:p-12 text-center space-y-8 animate-fadeIn">
+            <div className="space-y-4">
+              <h2 className="text-3xl md:text-5xl font-bold text-gray-800">Welcome</h2>
+              <p className="text-base md:text-lg text-gray-600">Create custom questions from your textbooks instantly</p>
             </div>
-            <p className="text-xs sm:text-sm text-gray-700 mb-3 font-medium">
-              ✨ Upload a sample question paper and AI will replicate its <span className="text-purple-700 font-bold">EXACT</span> format, structure, instructions, marking scheme, section divisions, and presentation style!
-            </p>
-            <div className="bg-purple-100 border border-purple-300 rounded-lg p-3 mb-3">
-              <p className="text-xs text-purple-900 font-semibold mb-2">🎯 What gets replicated:</p>
-              <ul className="text-xs text-purple-800 space-y-1 ml-4 list-disc">
-                <li>Header format, title, institution name</li>
-                <li>Instructions (word-for-word)</li>
-                <li>Section structure and divisions</li>
-                <li>Question numbering style</li>
-                <li>Mark allocation format</li>
-                <li>MCQ, Fill-in-blanks, True/False formats</li>
-                <li>Overall layout and spacing</li>
-              </ul>
-            </div>
-            <div
-              className="border-2 border-dashed rounded-lg p-4 sm:p-6 text-center cursor-pointer transition-all border-purple-400 bg-white hover:bg-purple-50 hover:border-purple-600"
-              onClick={() => patternFileInputRef.current?.click()}
-            >
-              <div className="text-3xl sm:text-4xl mb-2">📋</div>
-              <div className="text-sm sm:text-base text-gray-700">
-                {patternFile ? (
-                  <div>
-                    <span className="font-semibold text-purple-600">{patternFile.name}</span>
-                    <p className="text-xs text-green-600 mt-1">✓ Pattern loaded - AI will match this format exactly!</p>
-                  </div>
-                ) : (
-                  <div>
-                    <span className="font-semibold">Click to upload sample question paper</span>
-                    <p className="text-xs text-gray-500 mt-1">Get exact format replication!</p>
-                  </div>
-                )}
-              </div>
-              <input
-                ref={patternFileInputRef}
-                type="file"
-                accept="application/pdf"
-                onChange={handlePatternFileChange}
-                className="hidden"
-              />
-            </div>
-          </div>
-
-          {/* Main Textbook Upload */}
-          <h3 className="text-base sm:text-lg font-semibold text-gray-700 mb-3">
-            📚 Textbook/Study Material (Required)
-          </h3>
-
-          <div
-            className={`border-3 sm:border-4 border-dashed rounded-lg sm:rounded-xl p-6 sm:p-12 text-center cursor-pointer transition-all ${
-              isDragging
-                ? 'border-blue-600 bg-blue-50 scale-105'
-                : 'border-blue-300 bg-gradient-to-br from-blue-50 to-indigo-50 hover:bg-blue-100'
-            }`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <div className="text-4xl sm:text-6xl mb-3 sm:mb-4">📄</div>
-            <div className="text-base sm:text-xl text-gray-700 mb-2 px-2">
-              {file ? <span className="font-semibold text-blue-600">{file.name}</span> : 'Drop your PDF file here or click to browse'}
-            </div>
-            <div className="text-xs sm:text-sm text-gray-500">
-              Maximum file size: 16MB • Supports PDFs only
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/pdf"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-          </div>
-
-          <div className="mt-4 sm:mt-6 text-center">
             <button
-              type="button"
-              onClick={handleUpload}
-              disabled={!file || loading}
-              className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white px-8 sm:px-12 py-3 sm:py-4 rounded-full text-base sm:text-lg font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 w-full sm:w-auto"
+              onClick={() => setStarted(true)}
+              className="bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold py-4 px-8 rounded-xl hover:shadow-lg transition-all transform hover:scale-105 text-lg md:text-xl w-full md:w-auto inline-block"
             >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="inline-block w-4 h-4 sm:w-5 sm:h-5 border-3 border-white border-t-transparent rounded-full animate-spin"></span>
-                  Generating Questions...
-                </span>
-              ) : (
-                '✨ Generate Questions Now'
-              )}
+              Get Started →
             </button>
           </div>
-        </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-50 border-2 border-red-300 rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 shadow-lg animate-fadeIn">
-            <div className="flex items-start gap-3">
-              <span className="text-2xl sm:text-3xl">⚠️</span>
-              <div>
-                <h3 className="font-bold text-red-800 text-base sm:text-lg mb-1">Error Occurred</h3>
-                <p className="text-red-700 text-sm sm:text-base">{error}</p>
-              </div>
+        ) : !mode ? (
+          /* Mode Selection Screen */
+          <div className="card p-8 md:p-12 space-y-8 animate-fadeIn">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-800">How would you like to generate questions?</h2>
+              <p className="text-gray-600">Choose a method that works best for you</p>
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Without Pattern */}
+              <button
+                onClick={() => setMode('custom')}
+                className="p-8 border-2 border-blue-200 rounded-xl hover:border-blue-600 hover:shadow-lg transition-all text-left space-y-4 group"
+              >
+                <div className="text-4xl">⚙️</div>
+                <h3 className="text-xl font-bold text-gray-800 group-hover:text-blue-600">Custom Configuration</h3>
+                <p className="text-sm text-gray-600">Choose class, subject, and difficulty level</p>
+                <p className="text-xs text-gray-500">Select specific question types and numbers</p>
+              </button>
+              {/* With Pattern */}
+              <button
+                onClick={() => setMode('pattern')}
+                className="p-8 border-2 border-purple-200 rounded-xl hover:border-purple-600 hover:shadow-lg transition-all text-left space-y-4 group"
+              >
+                <div className="text-4xl">📋</div>
+                <h3 className="text-xl font-bold text-gray-800 group-hover:text-purple-600">Use Pattern</h3>
+                <p className="text-sm text-gray-600">Upload a sample paper to match</p>
+                <p className="text-xs text-gray-500">Replicates format, structure, and style</p>
+              </button>
+            </div>
+            <button
+              onClick={() => setStarted(false)}
+              className="text-gray-500 hover:text-gray-700 text-sm font-semibold text-center w-full"
+            >
+              ← Back
+            </button>
           </div>
-        )}
+        ) : (
+          <>
+            {/* Question Customizer - Only for Custom Mode */}
+            {mode === 'custom' && (
+              <QuestionCustomizer config={config} onConfigChange={setConfig} mode="custom" />
+            )}
 
-        {/* Results Section */}
-        {latexContent && (
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 md:p-8 animate-fadeIn">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
-                ✅ Generated Questions {isFromPattern && '(Pattern-based)'}
+            {/* Question Customizer - For Pattern Mode (only class/subject/difficulty) */}
+            {mode === 'pattern' && (
+              <QuestionCustomizer config={config} onConfigChange={setConfig} mode="pattern" />
+            )}
+
+            {/* Upload Section */}
+            <div className="card p-6 md:p-8 space-y-6">
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-800 flex items-center gap-3">
+                <span>📤</span> Upload
               </h2>
-              <div className="flex gap-2 sm:gap-3 flex-wrap w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={handleDownloadLatex}
-                  className="bg-blue-600 text-white px-3 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-semibold shadow hover:bg-blue-700 transition-all hover:scale-105 flex-1 sm:flex-none"
+
+              {/* Pattern File Upload - Only for Pattern Mode */}
+              {mode === 'pattern' && (
+                <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-4 md:p-6 rounded-xl border-2 border-purple-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base md:text-lg font-bold text-gray-800">📋 Sample Paper</h3>
+                    {patternFile && (
+                      <button
+                        onClick={() => setPatternFile(null)}
+                        className="text-red-600 hover:text-red-700 font-semibold"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                  <div
+                    className="border-2 border-dashed border-purple-400 rounded-lg p-6 text-center cursor-pointer hover:bg-purple-100 transition-colors bg-white"
+                    onClick={() => patternFileInputRef.current?.click()}
+                  >
+                    <div className="text-3xl md:text-4xl mb-2">📋</div>
+                    {patternFile ? (
+                      <div>
+                        <p className="font-semibold text-purple-600">{patternFile.name}</p>
+                        <p className="text-xs text-green-600 mt-1">✓ Loaded</p>
+                      </div>
+                    ) : (
+                      <p className="text-sm md:text-base text-gray-600">Click to upload sample paper</p>
+                    )}
+                    <input
+                      ref={patternFileInputRef}
+                      type="file"
+                      accept="application/pdf"
+                      onChange={handlePatternFileChange}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Main PDF Upload */}
+              <div className="space-y-3">
+                <h3 className="text-base md:text-lg font-bold text-gray-800">📚 Textbook PDF</h3>
+                <div
+                  className={`border-3 border-dashed rounded-xl p-8 md:p-12 text-center cursor-pointer transition-all ${
+                    isDragging
+                      ? 'border-blue-600 bg-blue-100 scale-105'
+                      : 'border-blue-300 bg-blue-50 hover:bg-blue-100'
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
                 >
-                  📥 LaTeX
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDownloadPDF(false)}
-                  disabled={loading}
-                  className="bg-green-600 text-white px-3 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-semibold shadow hover:bg-green-700 transition-all disabled:opacity-50 hover:scale-105 flex-1 sm:flex-none"
-                >
-                  {loading ? 'Compiling...' : '📄 PDF (Q)'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDownloadPDF(true)}
-                  disabled={loading}
-                  className="bg-purple-600 text-white px-3 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-semibold shadow hover:bg-purple-700 transition-all disabled:opacity-50 hover:scale-105 flex-1 sm:flex-none"
-                >
-                  {loading ? 'Compiling...' : '📚 PDF (Q+S)'}
-                </button>
+                  <div className="text-5xl md:text-6xl mb-4">📄</div>
+                  <p className="text-base md:text-lg text-gray-700 font-semibold mb-2">
+                    {file ? <span className="text-blue-600">{file.name}</span> : 'Drop PDF or click'}
+                  </p>
+                  <p className="text-xs md:text-sm text-gray-500">Max 16MB</p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                </div>
               </div>
+
+              {/* Generate Button */}
+              <button
+                type="button"
+                onClick={handleUpload}
+                disabled={!file || loading}
+                className="w-full btn-primary py-4 md:py-5 text-base md:text-lg font-bold flex items-center justify-center gap-3"
+              >
+                {loading ? (
+                  <>
+                    <span className="inline-block w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin"></span>
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <span>✨</span> Generate Questions
+                  </>
+                )}
+              </button>
+
+              {/* Back to Mode Selection */}
+              <button
+                onClick={() => {
+                  setMode(null);
+                  setFile(null);
+                  setPatternFile(null);
+                  setLatexContent('');
+                  setError('');
+                }}
+                className="text-gray-500 hover:text-gray-700 text-sm font-semibold text-center w-full mt-2"
+              >
+                ← Back to Options
+              </button>
             </div>
 
-            {!isFromPattern && <LatexPreview content={latexContent} />}
-            {isFromPattern && (
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 text-center border-2 border-blue-200">
-                <div className="text-5xl mb-4">📋</div>
-                <p className="text-lg font-semibold text-gray-800 mb-2">
-                  Questions Generated from Pattern
-                </p>
-                <p className="text-sm text-gray-600">
-                  Use the download buttons above to get your questions in LaTeX or PDF format
-                </p>
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-50 border-2 border-red-300 rounded-xl p-4 md:p-6 shadow-md animate-fadeIn flex items-start gap-4">
+                <span className="text-3xl">⚠️</span>
+                <div className="flex-1">
+                  <p className="text-red-700 text-sm md:text-base">{error}</p>
+                </div>
               </div>
             )}
-          </div>
-        )}
 
-        {/* Loading Indicator */}
-        {loading && !latexContent && (
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl p-8 sm:p-12 text-center">
-            <div className="inline-block w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-lg sm:text-xl text-gray-700">
-              Processing your textbook and generating questions...
-            </p>
-            <p className="text-xs sm:text-sm text-gray-500 mt-2">
-              This may take a minute or two ⏱️
-            </p>
-          </div>
+            {/* Results Section */}
+            {latexContent && (
+              <div className="animate-fadeIn">
+                <div className="card p-6 md:p-8 space-y-6">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <h2 className="text-2xl md:text-3xl font-bold text-gray-800">✅ Generated</h2>
+                    <div className="flex gap-2 w-full md:w-auto flex-wrap">
+                      <button
+                        onClick={handleDownloadLatex}
+                        className="btn-secondary flex-1 md:flex-none py-2 md:py-3 px-4 md:px-6 text-sm md:text-base"
+                      >
+                        📥 LaTeX
+                      </button>
+                      <button
+                        onClick={() => handleDownloadPDF(false)}
+                        disabled={loading}
+                        className="btn-secondary flex-1 md:flex-none py-2 md:py-3 px-4 md:px-6 text-sm md:text-base disabled:opacity-50"
+                      >
+                        📄 Questions
+                      </button>
+                      <button
+                        onClick={() => handleDownloadPDF(true)}
+                        disabled={loading}
+                        className="btn-primary flex-1 md:flex-none py-2 md:py-3 px-4 md:px-6 text-sm md:text-base disabled:opacity-50"
+                      >
+                        📚 With Solution
+                      </button>
+                    </div>
+                  </div>
+
+                  {!isFromPattern && <LatexPreview content={latexContent} />}
+                  {isFromPattern && (
+                    <div className="text-center space-y-3 py-8">
+                      <div className="text-5xl">✓</div>
+                      <p className="text-lg font-bold text-gray-800">Generated Successfully</p>
+                      <p className="text-sm text-gray-600">Download using options above</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Loading Indicator */}
+            {loading && !latexContent && (
+              <div className="card p-12 text-center space-y-4">
+                <div className="inline-block w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-lg text-gray-700 font-semibold">Processing...</p>
+              </div>
+            )}
+          </>
         )}
-        
-        {/* Footer */}
-        <footer className="text-center text-white/80 mt-8 sm:mt-12 pb-4">
-          <p className="text-xs sm:text-sm">
-            © 2026 STUDYBUDDY • Powered by INFOTECH SERVICES • All Rights Reserved
-          </p>
-        </footer>
-      </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-blue-100 bg-white/50 mt-12 py-6 text-center text-sm text-gray-600">
+        <p>© 2026 STUDYBUDDY</p>
+      </footer>
     </div>
   );
 }
