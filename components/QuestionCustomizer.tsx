@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSwipe } from '@/hooks/useSwipe';
 
 interface QuestionConfig {
@@ -63,21 +63,58 @@ const DIFFICULTIES = [
   //{ value: 'mixed', label: '🎯 mixed' },
 ];
 
-const CLASSES = [
-  { value: '6', label: 'Class 6' },
-  { value: '7', label: 'Class 7' },
-  { value: '8', label: 'Class 8' },
-  { value: '9', label: 'Class 9' },
-  { value: '10', label: 'Class 10' },
-  { value: '11', label: 'Class 11' },
-  { value: '12', label: 'Class 12' },
-  { value: 'college', label: 'College/University' },
+const CLASS_CATEGORIES = [
+  {
+    value: 'secondary',
+    label: '📚 Secondary',
+    classes: [
+      { value: '4', label: 'Class 4' },
+      { value: '5', label: 'Class 5' },
+      { value: '6', label: 'Class 6' },
+      { value: '7', label: 'Class 7' },
+      { value: '8', label: 'Class 8' },
+      { value: '9', label: 'Class 9' },
+      { value: '10', label: 'Class 10' },
+    ]
+  },
+  {
+    value: 'higher-secondary',
+    label: '🎓 Higher Secondary',
+    classes: [
+      { value: '11', label: 'Class 11' },
+      { value: '12', label: 'Class 12' },
+    ]
+  },
+  {
+    value: 'college',
+    label: '🏛️ College/University',
+    classes: []
+  }
 ];
 
 type Step = 'class' | 'subject' | 'difficulty' | 'customize' | 'complete';
 
 export default function QuestionCustomizer({ config, onConfigChange, mode }: Props) {
   const [step, setStep] = useState<Step>('class');
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setHoveredCategory(null);
+      }
+    };
+
+    if (hoveredCategory) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [hoveredCategory]);
 
   const swipeHandlers = useSwipe({
     onSwipeLeft: handleSwipeLeft,
@@ -112,29 +149,72 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
 
   const getTotalSteps = () => mode === 'pattern' ? 4 : 5;
 
-  const renderClassSelector = () => (
-    <div className="animate-fadeIn">
-      <h3 className="text-lg font-bold text-gray-800 mb-4">Select Class</h3>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        {CLASSES.map(cls => (
-          <button
-            key={cls.value}
-            onClick={() => {
-              onConfigChange({ ...config, studentClass: cls.value });
-              goToStep('subject');
-            }}
-            className={`py-3 px-2 rounded-lg font-semibold text-xs md:text-sm transition-all ${
-              config.studentClass === cls.value
-                ? 'bg-blue-600 text-white shadow-lg'
-                : 'bg-sky-100 text-blue-700 hover:bg-sky-200'
-            }`}
-          >
-            {cls.label.replace('Class ', '')}
-          </button>
-        ))}
+  const renderClassSelector = () => {
+    return (
+      <div className="animate-fadeIn" ref={dropdownRef}>
+        <h3 className="text-lg font-bold text-gray-800 mb-4">Select Class Level</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {CLASS_CATEGORIES.map(category => (
+            <div
+              key={category.value}
+              className="relative"
+              onMouseEnter={() => category.classes.length > 0 && setHoveredCategory(category.value)}
+              onMouseLeave={() => setHoveredCategory(null)}
+            >
+              <button
+                onClick={() => {
+                  if (category.value === 'college') {
+                    onConfigChange({ ...config, studentClass: 'college' });
+                    goToStep('subject');
+                  } else {
+                    // Toggle dropdown on click for mobile
+                    setHoveredCategory(hoveredCategory === category.value ? null : category.value);
+                  }
+                }}
+                className={`w-full py-4 px-3 rounded-lg font-semibold text-sm transition-all ${
+                  config.studentClass === category.value || 
+                  (category.value === 'secondary' && ['4', '5', '6', '7', '8', '9', '10'].includes(config.studentClass)) ||
+                  (category.value === 'higher-secondary' && ['11', '12'].includes(config.studentClass))
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'bg-sky-100 text-blue-700 hover:bg-sky-200'
+                }`}
+              >
+                {category.label}
+                {category.classes.length > 0 && (
+                  <span className="text-xs block mt-1 opacity-75">
+                    {hoveredCategory === category.value ? '▲ Select class' : '▼ Click/Hover to select'}
+                  </span>
+                )}
+              </button>
+
+              {/* Dropdown for classes */}
+              {category.classes.length > 0 && hoveredCategory === category.value && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-blue-300 rounded-lg shadow-xl z-50 overflow-hidden">
+                  {category.classes.map(cls => (
+                    <button
+                      key={cls.value}
+                      onClick={() => {
+                        onConfigChange({ ...config, studentClass: cls.value });
+                        goToStep('subject');
+                        setHoveredCategory(null);
+                      }}
+                      className={`w-full py-2 px-3 text-left text-sm font-medium transition-all ${
+                        config.studentClass === cls.value
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white text-blue-700 hover:bg-blue-50'
+                      }`}
+                    >
+                      {cls.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderSubjectSelector = () => (
     <div className="animate-fadeIn">
@@ -376,30 +456,46 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
     </div>
   );
 
-  const renderComplete = () => (
-    <div className="animate-fadeIn">
-      <div className="bg-green-50 rounded-lg p-4 border-2 border-green-200 text-center space-y-2">
-        <p className="text-sm font-bold text-green-700">✓ Ready</p>
-        <div className="text-xs space-y-1 text-gray-700">
-          <p><span className="font-bold">Class:</span> {CLASSES.find(c => c.value === config.studentClass)?.label.replace('Class ', '')}</p>
-          <p><span className="font-bold">Subject:</span> {SUBJECTS.find(s => s.value === config.subject)?.label.split(' ')[0]}</p>
-          <p><span className="font-bold">Difficulty:</span> {DIFFICULTIES.find(d => d.value === config.difficulty)?.label.split(' ')[0]}</p>
-          {mode === 'custom' && (
-            <>
-              <p><span className="font-bold">Types:</span> {getTotalQuestionsByType()}</p>
-              <p><span className="font-bold">Marks:</span> {getTotalQuestionsByMarks()}</p>
-            </>
-          )}
+  const renderComplete = () => {
+    // Find the class label from CLASS_CATEGORIES
+    const getClassLabel = () => {
+      if (config.studentClass === 'college') {
+        return 'College/University';
+      }
+      for (const category of CLASS_CATEGORIES) {
+        const classItem = category.classes.find(c => c.value === config.studentClass);
+        if (classItem) {
+          return classItem.label;
+        }
+      }
+      return config.studentClass;
+    };
+
+    return (
+      <div className="animate-fadeIn">
+        <div className="bg-green-50 rounded-lg p-4 border-2 border-green-200 text-center space-y-2">
+          <p className="text-sm font-bold text-green-700">✓ Ready</p>
+          <div className="text-xs space-y-1 text-gray-700">
+            <p><span className="font-bold">Class:</span> {getClassLabel()}</p>
+            <p><span className="font-bold">Subject:</span> {SUBJECTS.find(s => s.value === config.subject)?.label.split(' ')[0]}</p>
+            <p><span className="font-bold">Difficulty:</span> {DIFFICULTIES.find(d => d.value === config.difficulty)?.label.split(' ')[0]}</p>
+            {mode === 'custom' && (
+              <>
+                <p><span className="font-bold">Types:</span> {getTotalQuestionsByType()}</p>
+                <p><span className="font-bold">Marks:</span> {getTotalQuestionsByMarks()}</p>
+              </>
+            )}
+          </div>
+          <button
+            onClick={() => setStep('class')}
+            className="mt-2 bg-blue-600 text-white font-bold py-1 px-4 rounded text-xs hover:bg-blue-700"
+          >
+            Change
+          </button>
         </div>
-        <button
-          onClick={() => setStep('class')}
-          className="mt-2 bg-blue-600 text-white font-bold py-1 px-4 rounded text-xs hover:bg-blue-700"
-        >
-          Change
-        </button>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div {...swipeHandlers} className="card p-5 md:p-6 space-y-4 animate-fadeIn">
