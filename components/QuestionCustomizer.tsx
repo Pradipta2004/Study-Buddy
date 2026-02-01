@@ -32,28 +32,32 @@ interface Props {
 }
 
 const SUBJECTS = [
-  { value: 'mathematics', label: '📐 Mathematics' },
-  { value: 'physics', label: '⚛️ Physics' },
-  { value: 'chemistry', label: '🧪 Chemistry' },
-  { value: 'biology', label: '🧬 Biology' },
-  { value: 'computer-science', label: '💻 Computer Science' },
-  { value: 'english', label: '📚 English' },
-  { value: 'hindi', label: '🇮🇳 Hindi' },
-  { value: 'social-science', label: '🌍 Social Science' },
-  { value: 'history', label: '📜 History' },
-  { value: 'geography', label: '🗺️ Geography' },
-  { value: 'political-science', label: '🏛️ Political Science' },
-  { value: 'economics', label: '💰 Economics' },
-  { value: 'accountancy', label: '📊 Accountancy' },
-  { value: 'business-studies', label: '💼 Business Studies' },
-  { value: 'statistics', label: '📈 Statistics' },
-  { value: 'engineering', label: '⚙️ Engineering' },
-  { value: 'environmental-science', label: '🌱 Environmental Science' },
-  { value: 'psychology', label: '🧠 Psychology' },
-  { value: 'sociology', label: '👥 Sociology' },
-  { value: 'philosophy', label: '💭 Philosophy' },
-  { value: 'sanskrit', label: '🕉️ Sanskrit' },
-  { value: 'general-science', label: '🔬 General Science' },
+  { value: 'mathematics', label: '📐 Mathematics', levels: ['secondary', 'higher-secondary', 'college'] },
+  { value: 'general-science', label: '🔬 General Science', levels: ['secondary'] },
+  { value: 'english', label: '📚 English', levels: ['secondary', 'higher-secondary', 'college'] },
+  { value: 'hindi', label: '🇮🇳 Hindi', levels: ['secondary', 'higher-secondary'] },
+  { value: 'social-science', label: '🌍 Social Science', levels: ['secondary'] },
+  { value: 'computer-science', label: '💻 Computer Science', levels: ['secondary', 'higher-secondary', 'college'] },
+  { value: 'sanskrit', label: '🕉️ Sanskrit', levels: ['secondary', 'higher-secondary'] },
+  { value: 'environmental-science', label: '🌱 Environmental Science', levels: ['secondary', 'college'] },
+  { value: 'physics', label: '⚛️ Physics', levels: ['higher-secondary', 'college'] },
+  { value: 'chemistry', label: '🧪 Chemistry', levels: ['higher-secondary', 'college'] },
+  { value: 'biology', label: '🧬 Biology', levels: ['higher-secondary', 'college'] },
+  { value: 'history', label: '📜 History', levels: ['higher-secondary', 'college'] },
+  { value: 'geography', label: '🗺️ Geography', levels: ['higher-secondary', 'college'] },
+  { value: 'political-science', label: '🏛️ Political Science', levels: ['higher-secondary', 'college'] },
+  { value: 'economics', label: '💰 Economics', levels: ['higher-secondary', 'college'] },
+  { value: 'accountancy', label: '📊 Accountancy', levels: ['higher-secondary', 'college'] },
+  { value: 'business-studies', label: '💼 Business Studies', levels: ['higher-secondary', 'college'] },
+  { value: 'psychology', label: '🧠 Psychology', levels: ['higher-secondary', 'college'] },
+  { value: 'sociology', label: '👥 Sociology', levels: ['higher-secondary', 'college'] },
+  { value: 'physical-education', label: '⚽ Physical Education', levels: ['higher-secondary'] },
+  { value: 'statistics', label: '📈 Statistics', levels: ['college'] },
+  { value: 'engineering', label: '⚙️ Engineering', levels: ['college'] },
+  { value: 'philosophy', label: '💭 Philosophy', levels: ['college'] },
+  { value: 'law', label: '⚖️ Law', levels: ['college'] },
+  { value: 'medical-science', label: '🏥 Medical Science', levels: ['college'] },
+  { value: 'commerce', label: '💳 Commerce', levels: ['college'] },
 ];
 
 const DIFFICULTIES = [
@@ -149,6 +153,20 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
 
   const getTotalSteps = () => mode === 'pattern' ? 4 : 5;
 
+  // Get current class level category
+  const getCurrentClassLevel = (): string => {
+    if (config.studentClass === 'college') return 'college';
+    if (['11', '12'].includes(config.studentClass)) return 'higher-secondary';
+    if (['4', '5', '6', '7', '8', '9', '10'].includes(config.studentClass)) return 'secondary';
+    return 'secondary'; // default
+  };
+
+  // Filter subjects based on selected class level
+  const getAvailableSubjects = () => {
+    const level = getCurrentClassLevel();
+    return SUBJECTS.filter(subject => subject.levels.includes(level));
+  };
+
   const renderClassSelector = () => {
     return (
       <div className="animate-fadeIn" ref={dropdownRef}>
@@ -216,29 +234,36 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
     );
   };
 
-  const renderSubjectSelector = () => (
-    <div className="animate-fadeIn">
-      <h3 className="text-lg font-bold text-gray-800 mb-4">Select Subject</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-72 overflow-y-auto">
-        {SUBJECTS.map(subject => (
-          <button
-            key={subject.value}
-            onClick={() => {
-              onConfigChange({ ...config, subject: subject.value });
-              goToStep('difficulty');
-            }}
-            className={`py-3 px-3 rounded-lg font-semibold text-sm transition-all text-left ${
-              config.subject === subject.value
-                ? 'bg-blue-600 text-white shadow-lg'
-                : 'bg-sky-100 text-blue-700 hover:bg-sky-200'
-            }`}
-          >
-            {subject.label}
-          </button>
-        ))}
+  const renderSubjectSelector = () => {
+    const availableSubjects = getAvailableSubjects();
+    
+    return (
+      <div className="animate-fadeIn">
+        <h3 className="text-lg font-bold text-gray-800 mb-4">Select Subject</h3>
+        <p className="text-xs text-gray-500 mb-3">
+          Showing subjects for {getCurrentClassLevel() === 'secondary' ? 'Secondary' : getCurrentClassLevel() === 'higher-secondary' ? 'Higher Secondary' : 'College/University'}
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-72 overflow-y-auto">
+          {availableSubjects.map(subject => (
+            <button
+              key={subject.value}
+              onClick={() => {
+                onConfigChange({ ...config, subject: subject.value });
+                goToStep('difficulty');
+              }}
+              className={`py-3 px-3 rounded-lg font-semibold text-sm transition-all text-left ${
+                config.subject === subject.value
+                  ? 'bg-blue-600 text-white shadow-lg'
+                  : 'bg-sky-100 text-blue-700 hover:bg-sky-200'
+              }`}
+            >
+              {subject.label}
+            </button>
+          ))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderDifficultySelector = () => (
     <div className="animate-fadeIn">
