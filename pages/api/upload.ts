@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import formidable, { File } from 'formidable';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export const config = {
@@ -724,7 +725,8 @@ export default async function handler(
   }
 
   try {
-    const uploadDir = path.join(process.cwd(), 'uploads');
+    // Vercel/serverless writable path is /tmp
+    const uploadDir = path.join(os.tmpdir(), 'study-buddy-uploads');
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }

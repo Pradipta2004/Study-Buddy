@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
@@ -176,8 +177,8 @@ export default async function handler(
       processedLatex = processedLatex.replace(/\\subsection\*\{Solution\}/gi, '');
     }
 
-    // Create temporary directory
-    const tmpBaseDir = path.join(process.cwd(), 'tmp');
+    // Create temporary directory (Vercel/serverless writable path is /tmp)
+    const tmpBaseDir = path.join(os.tmpdir(), 'study-buddy');
     if (!fs.existsSync(tmpBaseDir)) {
       fs.mkdirSync(tmpBaseDir, { recursive: true });
     }
